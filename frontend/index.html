@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArtVault - Digital Art Marketplace</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body {
+  font-family: 'Inter', sans-serif;
+}
+.hidden { display: none; }
+</style>
+</head>
+<body class="bg-gradient-to-br from-purple-500 to-indigo-600 text-gray-800">
+
+<!-- HOME PAGE -->
+<section id="homePage" class="flex flex-col justify-center items-center h-screen text-white">
+  <h1 class="text-5xl font-extrabold mb-4 drop-shadow-lg">🎨 ArtVault</h1>
+  <p class="mb-6 text-xl drop-shadow-md">Discover, buy, and sell amazing digital artworks</p>
+  <button onclick="showLogin()" class="bg-white text-indigo-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-200 shadow-lg transition">Enter Marketplace</button>
+</section>
+
+<!-- HEADER -->
+<header class="bg-white shadow-md p-4 flex justify-between items-center hidden" id="mainHeader">
+  <h1 class="text-2xl font-bold text-indigo-600">🎨 ArtVault</h1>
+  <div id="userSection" class="hidden">
+    <span id="userName" class="mr-4 font-semibold"></span>
+    <button onclick="logout()" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Logout</button>
+  </div>
+</header>
+
+<!-- LOGIN / REGISTER -->
+<section id="authSection" class="flex justify-center items-center h-[80vh] hidden">
+  <div class="bg-white shadow-2xl rounded-xl p-10 w-96">
+    <h2 id="formTitle" class="text-2xl font-bold mb-6 text-center text-indigo-600">Login to ArtVault</h2>
+    <form id="authForm" class="space-y-4">
+      <input type="text" id="name" placeholder="Full Name" class="hidden w-full p-3 border rounded-lg">
+      <input type="email" id="email" placeholder="Email" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-400">
+      <input type="password" id="password" placeholder="Password" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-400">
+      <select id="role" class="hidden w-full p-3 border rounded-lg">
+        <option value="">Select Role</option>
+        <option value="artist">Artist</option>
+        <option value="buyer">Buyer</option>
+      </select>
+      <button type="submit" class="bg-indigo-600 text-white w-full p-3 rounded-lg font-semibold hover:bg-indigo-700 transition">Login</button>
+      <p id="toggleAuth" class="text-center text-sm text-indigo-500 cursor-pointer hover:underline">Create an account</p>
+    </form>
+  </div>
+</section>
+
+<!-- ARTIST DASHBOARD -->
+<section id="artistSection" class="hidden p-8 bg-gray-50 min-h-screen">
+  <h2 class="text-3xl font-bold mb-6 text-indigo-600">🎨 Your Artworks</h2>
+  <form id="addArtForm" class="space-y-4 mb-8 bg-white p-6 rounded-xl shadow-lg" enctype="multipart/form-data">
+    <input type="text" id="title" placeholder="Artwork Title" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-400">
+    <input type="file" id="image" accept="image/*" required class="w-full p-2 border rounded-lg">
+    <textarea id="description" placeholder="Description" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-400"></textarea>
+    <input type="number" id="price" placeholder="Price (₹)" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-400">
+    <select id="is_auction" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-400">
+      <option value="0">Fixed Price</option>
+      <option value="1">Auction</option>
+    </select>
+    <input type="datetime-local" id="auction_end" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-400">
+    <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-semibold">Add Artwork</button>
+  </form>
+  <div id="artistGallery" class="grid md:grid-cols-3 gap-6"></div>
+</section>
+
+<!-- BUYER DASHBOARD -->
+<section id="buyerSection" class="hidden p-8 bg-gray-50 min-h-screen">
+  <h2 class="text-3xl font-bold mb-6 text-indigo-600">🖼 Explore Artworks</h2>
+  <div id="buyerGallery" class="grid md:grid-cols-3 gap-6"></div>
+</section>
+
+<!-- BID MODAL -->
+<div id="bidModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+  <div class="bg-white p-6 rounded-xl shadow-lg w-80">
+    <h3 class="text-xl font-bold mb-4 text-indigo-600">Place Your Bid</h3>
+    <input type="number" id="bidAmount" placeholder="Enter bid amount" class="w-full p-3 border rounded-lg mb-4 focus:ring-2 focus:ring-indigo-400">
+    <button id="submitBid" class="bg-yellow-500 text-white px-4 py-2 rounded-lg w-full font-semibold hover:bg-yellow-600 transition">Submit Bid</button>
+    <button onclick="closeBidModal()" class="mt-2 text-gray-600 w-full hover:underline">Cancel</button>
+  </div>
+</div>
+
+<script>
+const baseURL = "http://localhost:5000/api";
+let currentUser = null;
+let currentBidArtworkId = null;
+
+const homePage = document.getElementById("homePage");
+const authSection = document.getElementById("authSection");
+const artistSection = document.getElementById("artistSection");
+const buyerSection = document.getElementById("buyerSection");
+const userSection = document.getElementById("userSection");
+const mainHeader = document.getElementById("mainHeader");
+const userName = document.getElementById("userName");
+const authForm = document.getElementById("authForm");
+const formTitle = document.getElementById("formTitle");
+const toggleAuth = document.getElementById("toggleAuth");
+const nameInput = document.getElementById("name");
+const roleSelect = document.getElementById("role");
+const submitButton = authForm.querySelector("button");
+let isLogin = true;
+
+function showLogin() {
+  homePage.classList.add("hidden");
+  authSection.classList.remove("hidden");
+  mainHeader.classList.remove("hidden");
+}
+
+// Toggle login/register
+toggleAuth.addEventListener("click", () => {
+  isLogin = !isLogin;
+  formTitle.textContent = isLogin ? "Login to ArtVault" : "Register to ArtVault";
+  nameInput.classList.toggle("hidden", isLogin);
+  roleSelect.classList.toggle("hidden", isLogin);
+  submitButton.textContent = isLogin ? "Login" : "Register";
+  toggleAuth.textContent = isLogin ? "Create an account" : "Already have an account?";
+});
+
+// Auth submit
+authForm.addEventListener("submit", async e => {
+  e.preventDefault();
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  if (isLogin) {
+    const res = await fetch(`${baseURL}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (res.ok || data.user) {
+      currentUser = data.user;
+      localStorage.setItem("user", JSON.stringify(currentUser));
+      loadDashboard();
+    } else alert(data.message || "Login failed");
+  } else {
+    const name = nameInput.value;
+    const role = roleSelect.value;
+    const res = await fetch(`${baseURL}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password, role })
+    });
+    const data = await res.json();
+    if (res.ok) { alert("Registered! Please login."); toggleAuth.click(); }
+    else alert(data.error || "Registration failed.");
+  }
+});
+
+function loadDashboard() {
+  authSection.classList.add("hidden");
+  userSection.classList.remove("hidden");
+  mainHeader.classList.remove("hidden");
+  userName.textContent = `Hi, ${currentUser.name}`;
+
+  if (currentUser.role === "artist") {
+    artistSection.classList.remove("hidden");
+    buyerSection.classList.add("hidden");
+    loadArtistGallery();
+  } else {
+    buyerSection.classList.remove("hidden");
+    artistSection.classList.add("hidden");
+    loadBuyerGallery();
+  }
+}
+
+async function loadArtistGallery() {
+  const res = await fetch(`${baseURL}/artworks`);
+  const artworks = await res.json();
+  const container = document.getElementById("artistGallery");
+  container.innerHTML = artworks
+    .filter(a => a.artist_id === currentUser.user_id)
+    .map(a => `
+      <div class="bg-white rounded-xl shadow p-4">
+        <img src="${a.image_path}" alt="${a.title}" class="rounded mb-2 h-48 w-full object-cover">
+        <h3 class="font-bold text-lg">${a.title}</h3>
+        <p>${a.description}</p>
+        <p class="text-indigo-600 font-semibold">₹${a.price}</p>
+        <p class="text-sm text-gray-500">Type: ${a.is_auction==1 ? 'Auction' : 'Fixed'}</p>
+        <button onclick="deleteArtwork(${a.art_id})" class="mt-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Delete</button>
+      </div>
+    `).join("");
+}
+
+async function loadBuyerGallery() {
+  const res = await fetch(`${baseURL}/artworks`);
+  const artworks = await res.json();
+  const container = document.getElementById("buyerGallery");
+  container.innerHTML = artworks
+    .map(a => `
+      <div class="bg-white rounded-xl shadow p-4">
+        <img src="${a.image_path}" alt="${a.title}" class="rounded mb-2 h-48 w-full object-cover">
+        <h3 class="font-bold text-lg">${a.title}</h3>
+        <p>${a.description}</p>
+        <p class="text-indigo-600 font-semibold">₹${a.price}</p>
+        ${a.is_auction==0
+          ? `<button onclick="buyArtwork(${a.art_id})" class="mt-2 bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Buy</button>`
+          : `<button onclick="openBidModal(${a.art_id})" class="mt-2 bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">Bid</button>`}
+      </div>
+    `).join("");
+}
+
+// Add artwork
+document.getElementById("addArtForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const form = e.target;
+  const formData = new FormData();
+  formData.append("title", form.title.value);
+  formData.append("description", form.description.value);
+  formData.append("price", form.price.value);
+  formData.append("artist_id", currentUser.user_id);
+  formData.append("is_auction", form.is_auction.value);
+  formData.append("auction_end", form.auction_end.value || null);
+  formData.append("image", form.image.files[0]);
+
+  const res = await fetch(`${baseURL}/artworks`, { method: "POST", body: formData });
+  const data = await res.json();
+  if (res.ok || data.art_id) { alert(data.message); loadArtistGallery(); form.reset(); }
+  else alert(data.error || "Server error");
+});
+
+// Delete artwork
+async function deleteArtwork(id) {
+  if (!confirm("Delete this artwork?")) return;
+  const res = await fetch(`${baseURL}/artworks/${id}`, { method: "DELETE" });
+  const data = await res.json();
+  if (res.ok) loadArtistGallery();
+  else alert(data.error);
+}
+
+// Buy artwork
+async function buyArtwork(id) {
+  const res = await fetch(`${baseURL}/orders`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ art_id: id, user_id: currentUser.user_id })
+  });
+  const data = await res.json();
+  if (res.ok) loadBuyerGallery();
+  else alert(data.error);
+}
+
+// Bid modal
+function openBidModal(art_id) { currentBidArtworkId = art_id; document.getElementById("bidModal").classList.remove("hidden"); }
+function closeBidModal() { document.getElementById("bidModal").classList.add("hidden"); }
+
+document.getElementById("submitBid").addEventListener("click", async () => {
+  const bidAmount = document.getElementById("bidAmount").value;
+  if (!bidAmount) return alert("Enter bid amount");
+  const res = await fetch(`${baseURL}/bids`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ art_id: currentBidArtworkId, user_id: currentUser.user_id, bid_amount: bidAmount })
+  });
+  const data = await res.json();
+  if (res.ok || data.message) { alert(data.message); closeBidModal(); loadBuyerGallery(); }
+  else alert(data.error);
+});
+
+// Logout
+function logout() {
+  localStorage.removeItem("user");
+  currentUser = null;
+  homePage.classList.remove("hidden");
+  authSection.classList.add("hidden");
+  artistSection.classList.add("hidden");
+  buyerSection.classList.add("hidden");
+  mainHeader.classList.add("hidden");
+}
+
+// Auto-login
+window.addEventListener("load", () => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (user) { currentUser = user; loadDashboard(); mainHeader.classList.remove("hidden"); }
+});
+</script>
+</body>
+</html>

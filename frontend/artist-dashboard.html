@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artist Dashboard</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>Artist Dashboard</h1>
+  <button class="btn logout" onclick="logout()">Logout</button>
+</header>
+
+<section class="upload-section">
+  <form id="uploadForm">
+    <input type="text" name="title" placeholder="Title" required>
+    <textarea name="description" placeholder="Description"></textarea>
+    <input type="number" name="price" placeholder="Price" required>
+    <select name="cat_id">
+      <option value="1">Painting</option>
+      <option value="2">Sketch</option>
+      <option value="3">3D</option>
+    </select>
+    <label><input type="checkbox" name="is_auction"> Auction?</label>
+    <input type="datetime-local" name="auction_end">
+    <input type="file" name="artFile" required>
+    <button type="submit" class="btn btn-primary">Upload Artwork</button>
+  </form>
+</section>
+
+<script src="js/artist-dashboard.js"></script>
+<script>
+function logout() {
+  sessionStorage.clear();
+  window.location.href = 'login.html';
+}
+</script>
+
+</body>
+</html>

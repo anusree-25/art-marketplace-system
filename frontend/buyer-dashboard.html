@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buyer Dashboard</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>Buyer Dashboard</h1>
+  <button class="btn logout" onclick="logout()">Logout</button>
+</header>
+
+<div class="dashboard">
+  <aside class="sidebar" id="categories"></aside>
+  <main class="main" id="artworks"></main>
+</div>
+
+<script src="js/buyer-dashboard.js"></script>
+<script>
+function logout() {
+  sessionStorage.clear();
+  window.location.href = 'login.html';
+}
+</script>
+
+</body>
+</html>
